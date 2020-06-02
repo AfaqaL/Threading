@@ -8,6 +8,7 @@ public class Account {
 	private int id;
 	private int balance;
 	private int transactions;
+	public static int INIT_ACCOUNT = 1000;
 	
 	// It may work out to be handy for the account to
 	// have a pointer to its Bank.

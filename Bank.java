@@ -7,12 +7,25 @@
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 public class Bank {
 	public static final int ACCOUNTS = 20;	 // number of accounts
-	
 
-	
+	private static final int INIT_NUM_WORKERS = 1;
+
+	private Buffer buffer;
+	private	CountDownLatch latch;
+	private int numWorkers;
+
+	public Bank(){
+		this(INIT_NUM_WORKERS);
+	}
+	public Bank(int numWorkers){
+		this.numWorkers = numWorkers;
+		buffer = new Buffer(ACCOUNTS, this);
+		latch = new CountDownLatch(4);
+	}
 	/*
 	 Reads transaction data (from/to/amt) from a file for processing.
 	 (provided code)
@@ -36,13 +49,25 @@ public class Bank {
 				int amount = (int)tokenizer.nval;
 				
 				// Use the from/to/amount
-				
-				// YOUR CODE HERE
+				buffer.putTransaction(new Transaction(from, to, amount));
+				// put in queue
+			}
+
+			for (int i = 0; i < numWorkers; i++) {
+
 			}
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);
+		}
+	}
+
+	private class Worker implements Runnable{
+
+		@Override
+		public void run() {
+
 		}
 	}
 
@@ -53,6 +78,17 @@ public class Bank {
 	 -wait for the workers to finish
 	*/
 	public void processFile(String file, int numWorkers) {
+		for (int i = 0; i < numWorkers; i++) {
+			new Thread(new Worker()).start();
+		}
+		readFile(file);
+
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		//wait for ledge
 	}
 
 	
@@ -73,8 +109,10 @@ public class Bank {
 		if (args.length >= 2) {
 			numWorkers = Integer.parseInt(args[1]);
 		}
-		
-		// YOUR CODE HERE
+
+		Bank bank = new Bank();
+		bank.processFile(file, numWorkers);
+
 	}
 }
 
