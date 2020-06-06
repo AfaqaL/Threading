@@ -4,11 +4,100 @@
 */
 
 import java.security.*;
+import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 
 public class Cracker {
 	// Array of chars used to produce strings
 	public static final char[] CHARS = "abcdefghijklmnopqrstuvwxyz0123456789.,-!".toCharArray();
-	
+	private byte[] hash;
+	private boolean DONE_FLAG;
+	private CountDownLatch latch;
+	//private MessageDigest md;
+
+	public Cracker(){
+		this("SHA");
+	}
+	public Cracker(String algorithm) {
+
+	}
+
+	public static String generateMode(String target){
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA");
+			md.update(target.getBytes());
+			byte[] bytes = md.digest();
+			return hexToString(bytes);
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println("No such algorithmic expression...");
+			return "";
+		}
+	}
+
+	public void crackMode(String target, int maxLength, int numWorkers){
+		hash = hexToArray(target);
+		latch = new CountDownLatch(numWorkers);
+		int len = CHARS.length / numWorkers;
+		int rem = CHARS.length % numWorkers;
+
+		int start = 0;
+		while(start < CHARS.length){
+			int end = Math.min(start + len, CHARS.length);
+			new Thread(new Worker(start, end, maxLength)).start();
+			start = end;
+		}
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("All Done!");
+	}
+
+	private class Worker implements Runnable{
+		private int from, to, len;
+
+		public Worker(int from,int to,int len){
+			this.from = from;
+			this.to = to;
+			this.len = len;
+			System.out.println(from + " " + to);
+		}
+
+		@Override
+		public void run() {
+			for (int i = from; i < to; i++) {
+				String str = CHARS[i] + "";
+				recRun(str, 1);
+			}
+			latch.countDown();
+		}
+
+		private void recRun(String str, int currLen) {
+			if(currLen > len)
+				return;
+
+			if(isPassword(str))
+				System.out.println(str);
+
+			for (int i = 0; i < CHARS.length; i++) {
+				recRun(str + CHARS[i], currLen + 1);
+			}
+		}
+
+		private boolean isPassword(String pass) {
+		//	byte[] res;
+		//	try{
+//				md.update(pass.getBytes());
+//				res = md.digest();
+				return generateMode(pass).equals(hexToString(hash));
+		//	}catch (ArrayIndexOutOfBoundsException e){
+		//		System.out.println("Demerxa am stringze: " + pass);
+		//		return false;
+		//	}
+			//return Arrays.equals(res, hash);
+		}
+	}
 	
 	/*
 	 Given a byte[] array, produces a hex String,
@@ -43,16 +132,17 @@ public class Cracker {
 	
 	
 	public static void main(String[] args) {
-		if (args.length < 2) {
-			System.out.println("Args: target length [workers]");
-			System.exit(1);
+		if(args.length == 0){
+			throw new RuntimeException("No given arguments");
 		}
-		// args: targ len [num]
-		String targ = args[0];
-		int len = Integer.parseInt(args[1]);
-		int num = 1;
-		if (args.length>2) {
-			num = Integer.parseInt(args[2]);
+		Cracker cracker = new Cracker();
+		String target = args[0];
+		if(args.length == 1){
+			System.out.println(cracker.generateMode(target));
+		}else{
+			int lengths = Integer.parseInt(args[1]);
+			int numWorkers = Integer.parseInt(args[2]);
+			cracker.crackMode(target, lengths, numWorkers);
 		}
 		// a! 34800e15707fae815d7c90d49de44aca97e2d759
 		// xyz 66b27417d37e024c46526c2f6d358a754fc552f3

@@ -12,19 +12,15 @@ import java.util.concurrent.CountDownLatch;
 public class Bank {
 	public static final int ACCOUNTS = 20;	 // number of accounts
 
-	private static final int INIT_NUM_WORKERS = 1;
 
 	private Buffer buffer;
 	private	CountDownLatch latch;
 	private int numWorkers;
 
-	public Bank(){
-		this(INIT_NUM_WORKERS);
-	}
 	public Bank(int numWorkers){
 		this.numWorkers = numWorkers;
 		buffer = new Buffer(ACCOUNTS, this);
-		latch = new CountDownLatch(4);
+		latch = new CountDownLatch(numWorkers);
 	}
 	/*
 	 Reads transaction data (from/to/amt) from a file for processing.
@@ -54,7 +50,7 @@ public class Bank {
 			}
 
 			for (int i = 0; i < numWorkers; i++) {
-
+				buffer.putTransaction(new TerminateTransaction());
 			}
 		}
 		catch (Exception e) {
@@ -64,10 +60,18 @@ public class Bank {
 	}
 
 	private class Worker implements Runnable{
-
 		@Override
 		public void run() {
+			while(true){
+				Transaction curr = buffer.takeTransaction();
+				if(curr instanceof TerminateTransaction) {
+					break;
+				}
 
+				buffer.processTransaction(curr);
+			}
+
+			latch.countDown();
 		}
 	}
 
@@ -82,17 +86,16 @@ public class Bank {
 			new Thread(new Worker()).start();
 		}
 		readFile(file);
-
 		try {
 			latch.await();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		//wait for ledge
+		System.out.println(buffer.toString());
 	}
 
-	
-	
+
+
 	/*
 	 Looks at commandline args and calls Bank processing.
 	*/
@@ -102,15 +105,14 @@ public class Bank {
 			System.out.println("Args: transaction-file [num-workers [limit]]");
 			System.exit(1);
 		}
-		
+
 		String file = args[0];
-		
 		int numWorkers = 1;
 		if (args.length >= 2) {
 			numWorkers = Integer.parseInt(args[1]);
 		}
 
-		Bank bank = new Bank();
+		Bank bank = new Bank(numWorkers);
 		bank.processFile(file, numWorkers);
 
 	}

@@ -15,18 +15,22 @@ public class Buffer {
 	public Buffer(int numAccounts, Bank bank){
 		accounts = new Account[numAccounts];
 		blockq = new ArrayBlockingQueue<>(SIZE);
-		initAccounts(numAccounts);
+		initAccounts();
 		bufferBank = bank;
 	}
 
-	private void initAccounts(int numAccounts) {
-		for (int i = 0; i < numAccounts; i++) {
+	private void initAccounts() {
+		for (int i = 0; i < accounts.length; i++) {
 			accounts[i] = new Account(bufferBank, i, Account.INIT_ACCOUNT);
 		}
 	}
 
 	public void putTransaction(Transaction currTrans){
-		blockq.add(currTrans);
+		try {
+			blockq.put(currTrans);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public Transaction takeTransaction(){
@@ -38,6 +42,19 @@ public class Buffer {
 		}
 	}
 
+	public void processTransaction(Transaction curr){
+		accounts[curr.from].adjustBalance(-curr.amount);
+		accounts[curr.to].adjustBalance(curr.amount);
+	}
+
+	@Override
+	public String toString() {
+		String res = "";
+		for (int i = 0; i < accounts.length; i++) {
+			res += accounts[i].toString() + '\n';
+		}
+		return res;
+	}
 
 	// YOUR CODE HERE
 }

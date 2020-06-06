@@ -21,5 +21,15 @@ public class Account {
 		this.balance = balance;
 		transactions = 0;
 	}
+
+	public synchronized void adjustBalance(int amount){
+		balance += amount;
+		transactions++;
+	}
+
+	@Override
+	public String toString(){
+		return "Account N" + id + " Balance: " + balance + " Transactions: " + transactions;
+	}
 	
 }
