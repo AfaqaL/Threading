@@ -6,12 +6,11 @@
 */
 
 import java.io.*;
-import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 public class Bank {
 	public static final int ACCOUNTS = 20;	 // number of accounts
-
+	private static final int INITIAL_WORKERS = 1;
 
 	private Buffer buffer;
 	private	CountDownLatch latch;
@@ -26,36 +25,30 @@ public class Bank {
 	 Reads transaction data (from/to/amt) from a file for processing.
 	 (provided code)
 	 */
-	public void readFile(String file) {
-			try {
-			BufferedReader reader = new BufferedReader(new FileReader(file));
-			
-			// Use stream tokenizer to get successive words from file
-			StreamTokenizer tokenizer = new StreamTokenizer(reader);
-			
-			while (true) {
-				int read = tokenizer.nextToken();
-				if (read == StreamTokenizer.TT_EOF) break;  // detect EOF
-				int from = (int)tokenizer.nval;
-				
-				tokenizer.nextToken();
-				int to = (int)tokenizer.nval;
-				
-				tokenizer.nextToken();
-				int amount = (int)tokenizer.nval;
-				
-				// Use the from/to/amount
-				buffer.putTransaction(new Transaction(from, to, amount));
-				// put in queue
-			}
+	public void readFile(String file) throws Exception{
+		BufferedReader reader = new BufferedReader(new FileReader(file));
 
-			for (int i = 0; i < numWorkers; i++) {
-				buffer.putTransaction(new TerminateTransaction());
-			}
+		// Use stream tokenizer to get successive words from file
+		StreamTokenizer tokenizer = new StreamTokenizer(reader);
+
+		while (true) {
+			int read = tokenizer.nextToken();
+			if (read == StreamTokenizer.TT_EOF) break;  // detect EOF
+			int from = (int)tokenizer.nval;
+
+			tokenizer.nextToken();
+			int to = (int)tokenizer.nval;
+
+			tokenizer.nextToken();
+			int amount = (int)tokenizer.nval;
+
+			// Use the from/to/amount
+			buffer.putTransaction(new Transaction(from, to, amount));
+			// put in queue
 		}
-		catch (Exception e) {
-			e.printStackTrace();
-			System.exit(1);
+
+		for (int i = 0; i < numWorkers; i++) {
+			buffer.putTransaction(new TerminateTransaction());
 		}
 	}
 
@@ -81,16 +74,14 @@ public class Bank {
 	 -read file into the buffer
 	 -wait for the workers to finish
 	*/
-	public void processFile(String file, int numWorkers) {
+	public void processFile(String file, int numWorkers) throws Exception {
 		for (int i = 0; i < numWorkers; i++) {
 			new Thread(new Worker()).start();
 		}
 		readFile(file);
 		try {
 			latch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		} catch (InterruptedException ignored) {}
 		System.out.println(buffer.toString());
 	}
 
@@ -99,11 +90,11 @@ public class Bank {
 	/*
 	 Looks at commandline args and calls Bank processing.
 	*/
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception{
 		// deal with command-lines args
 		if (args.length == 0) {
 			System.out.println("Args: transaction-file [num-workers [limit]]");
-			System.exit(1);
+			return;
 		}
 
 		String file = args[0];

@@ -11,27 +11,19 @@ public class Cracker {
 	// Array of chars used to produce strings
 	public static final char[] CHARS = "abcdefghijklmnopqrstuvwxyz0123456789.,-!".toCharArray();
 	private byte[] hash;
-	private boolean DONE_FLAG;
 	private CountDownLatch latch;
 	//private MessageDigest md;
 
-	public Cracker(){
-		this("SHA");
-	}
-	public Cracker(String algorithm) {
 
-	}
 
 	public static String generateMode(String target){
+		byte[] bytes = null;
 		try {
 			MessageDigest md = MessageDigest.getInstance("SHA");
 			md.update(target.getBytes());
-			byte[] bytes = md.digest();
-			return hexToString(bytes);
-		} catch (NoSuchAlgorithmException e) {
-			System.out.println("No such algorithmic expression...");
-			return "";
-		}
+			bytes = md.digest();
+		} catch (NoSuchAlgorithmException e){}
+		return hexToString(bytes);
 	}
 
 	public void crackMode(String target, int maxLength, int numWorkers){
@@ -48,9 +40,7 @@ public class Cracker {
 		}
 		try {
 			latch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		} catch (InterruptedException e) {}
 		System.out.println("All Done!");
 	}
 
